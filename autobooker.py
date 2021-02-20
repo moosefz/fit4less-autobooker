@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
+from webdriver_manager.chrome import ChromeDriverManager
 
 load_dotenv()
 # set permissions for local chromedriver to test locally
@@ -60,18 +61,29 @@ try:
     available_slots = driver.find_elements_by_class_name("available-slots")[1].find_elements_by_class_name(
         "time-slot-box")
 
-    for slot in available_slots:
-        a_slot = str(slot.text).split(" ")[4] + str(slot.text).split(" ")[5].split('\n')[0]
-        if str(os.getenv("TIME_SLOT")) == a_slot:
-            print("Time slot found: ", a_slot)
-            slot.find_element_by_xpath('..').click()
-            driver.implicitly_wait(3)
-            driver.find_element_by_id("dialog_book_yes").click()
-            driver.implicitly_wait(5)
-            print("Reservation done!")
+    # preferred slots - try and loop multiple times until one is found
+    preferred_slots = ["1:30PM", "3:00PM", "5:00PM"]
+    booked = False
+
+    for currentSlot in preferred_slots: #parse preferred slots
+        if booked:
             break
-        else:
-            print("Skipping slot:", a_slot)
+        for slot in available_slots: #parse available slots
+            a_slot = str(slot.text).split(" ")[4] + str(slot.text).split(" ")[5].split('\n')[0]
+            print("Trying to find matching slot for: ", currentSlot)
+            if str(currentSlot) == a_slot:
+                print("Preferred time slot found: ", a_slot)
+                slot.find_element_by_xpath('..').click()
+                driver.implicitly_wait(3)
+                driver.find_element_by_id("dialog_book_yes").click()
+                driver.implicitly_wait(5)
+                print("Reservation done!")
+                booked = True
+                break
+            else:
+                print("Skipping slot:", a_slot)
+    if booked == False: #notify user nothing booked
+        print("No preferred slots found to book. Try again later")
 
 except Exception as err:
     print(str(err))
